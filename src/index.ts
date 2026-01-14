@@ -16,8 +16,8 @@ const launchWith = (options: NotePluginOptions) => async () => {
 
     search(entries, options);
     config(entries, options);
-    route(entries, options);
     await post(entries, options);
+    route(entries, options);
 };
 
 const plugin = (options: NotePluginOptions): PluginOption => {

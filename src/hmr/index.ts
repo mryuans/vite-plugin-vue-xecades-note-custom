@@ -21,8 +21,8 @@ const markdownHMR = async (
     entry.resetCache();
     search(entries, options);
     config(entries, options); // nav
-    route(entries, options); // meta
     await updateSomePosts(entries, [entry], options);
+    route(entries, options); // meta
 };
 
 const configHMR = (
