@@ -8,6 +8,7 @@ import search from "./cache/search";
 import config from "./cache/config";
 import route from "./cache/route";
 import post from "./cache/post";
+import { flushTimeCache } from "./entry/time";
 
 const pluginName = "vite-plugin-vue-xecades-note";
 
@@ -18,6 +19,7 @@ const launchWith = (options: NotePluginOptions) => async () => {
     config(entries, options);
     await post(entries, options);
     route(entries, options);
+    await flushTimeCache();
 };
 
 const plugin = (options: NotePluginOptions): PluginOption => {

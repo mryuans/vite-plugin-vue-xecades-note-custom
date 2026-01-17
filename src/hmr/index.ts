@@ -7,6 +7,7 @@ import search from "../cache/search";
 import config from "../cache/config";
 import route from "../cache/route";
 import { updateSomePosts } from "../cache/post";
+import { flushTimeCache } from "../entry/time";
 
 const markdownHMR = async (
     options: NotePluginOptions,
@@ -23,6 +24,7 @@ const markdownHMR = async (
     config(entries, options); // nav
     await updateSomePosts(entries, [entry], options);
     route(entries, options); // meta
+    await flushTimeCache();
 };
 
 const configHMR = (

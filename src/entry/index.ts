@@ -89,6 +89,11 @@ export interface Entry {
      * Time information of the entry.
      */
     time: { created: string; updated: string };
+
+    /**
+     * Last modified timestamp used by incremental cache.
+     */
+    mtime: number;
 }
 
 const md5 = (s: string) => createHash("md5").update(s).digest("hex");
@@ -111,6 +116,7 @@ export class Entry {
         this.awaits = [];
         this.expressions = [];
         this.toc = [];
+        this.mtime = 0;
     }
 
     /**
@@ -133,7 +139,9 @@ export class Entry {
      * Update time.
      */
     async updateTime() {
-        this.time = await timeOf(this.pathname);
+        const { created, updated, mtime } = await timeOf(this.pathname);
+        this.time = { created, updated };
+        this.mtime = mtime;
     }
 
     /**

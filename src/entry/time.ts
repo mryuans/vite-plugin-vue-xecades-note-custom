@@ -1,12 +1,24 @@
+import fs from "fs-extra";
 import { simpleGit } from "simple-git";
 
-import type { SimpleGit } from "simple-git";
 import type { Pathname } from ".";
 
-/** 当 git 查询更新时间在 ignoreBefore 之前时，使用 override 变量中的值 */
+const CACHE_PATH = "./cache/.git-times.json";
+
+interface CachedTime {
+    mtime: number;
+    created: string;
+    updated: string;
+}
+
+export interface TimeRecord {
+    created: string;
+    updated: string;
+    mtime: number;
+}
+
 const ignoreBefore = "2025-01-24T13:17:33.598Z";
 
-/** 当 override 有创建时间记录，使用该记录而忽略 git 查询结果 */
 const override = [
     {
         pathname: "docs/cs/ads/amortized-analysis.md",
@@ -155,23 +167,74 @@ const override = [
     },
 ];
 
-export const timeOf = async (pathname: Pathname) => {
-    const git: SimpleGit = simpleGit();
-    const commits = await git.log({ file: pathname });
+let cache: Record<Pathname, CachedTime> = {};
+let loaded = false;
+let dirty = false;
 
-    if (commits.total === 0) {
-        const now: string = new Date().toISOString();
-        return { created: now, updated: now };
+const loadCache = async () => {
+    if (loaded) return;
+
+    try {
+        const stored = await fs.readJson(CACHE_PATH);
+        cache = stored as Record<Pathname, CachedTime>;
+    } catch {
+        cache = {};
     }
 
-    const gitCreated = commits.all.at(-1)!.date;
-    const gitUpdated = commits.latest!.date;
+    loaded = true;
+};
 
-    const cached = override.find((item) => item.pathname === pathname);
+const saveCache = async () => {
+    if (!dirty) return;
 
-    const created: string = cached ? cached.created : gitCreated;
-    const updated: string =
-        gitUpdated < ignoreBefore && cached ? cached.updated : gitUpdated;
+    await fs.ensureDir("./cache");
+    await fs.outputJson(CACHE_PATH, cache, { spaces: 2 });
+    dirty = false;
+};
 
-    return { created, updated };
+export const flushTimeCache = async () => {
+    await loadCache();
+    await saveCache();
+};
+
+export const timeOf = async (pathname: Pathname): Promise<TimeRecord> => {
+    await loadCache();
+
+    const stat = await fs.stat(pathname);
+    const mtime = stat.mtimeMs;
+    const cached = cache[pathname];
+    if (cached && cached.mtime === mtime) {
+        return {
+            created: cached.created,
+            updated: cached.updated,
+            mtime: cached.mtime,
+        };
+    }
+
+    const git = simpleGit();
+    const commits = await git.log({ file: pathname });
+    const overrideEntry = override.find((item) => item.pathname === pathname);
+
+    let created: string;
+    let updated: string;
+
+    if (commits.total === 0) {
+        const now = new Date().toISOString();
+        created = overrideEntry ? overrideEntry.created : now;
+        updated = overrideEntry ? overrideEntry.updated : now;
+    } else {
+        const gitCreated = commits.all.at(-1)!.date;
+        const gitUpdated = commits.latest!.date;
+
+        created = overrideEntry ? overrideEntry.created : gitCreated;
+        updated =
+            gitUpdated < ignoreBefore && overrideEntry
+                ? overrideEntry.updated
+                : gitUpdated;
+    }
+
+    cache[pathname] = { mtime, created, updated };
+    dirty = true;
+
+    return { created, updated, mtime };
 };
