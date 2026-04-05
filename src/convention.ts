@@ -15,6 +15,9 @@ export interface MarkdownFrontMatter {
 
     /** Whether to show timestamp, i.e. Creation & Modification time */
     timestamp?: boolean;
+
+    /** Specify an overarching layout (e.g., 'home' for Hero layout) */
+    layout?: string;
 }
 
 /**

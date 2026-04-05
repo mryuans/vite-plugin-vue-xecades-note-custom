@@ -25,8 +25,16 @@ const readYML = (path: string): RawConfig => {
  */
 const parseNav = (raw: RawNavNode[], entries: Entry[]): NavNode[] => {
     const name_of = (node: RawNavNode) => Object.keys(node)[0];
-    const title_of = (pathname: string) =>
-        entries.filter((d) => d.pathname === pathname)[0].front_matter.title;
+    const title_of = (pathname: string) => {
+        const filterOut = entries.filter((d) => d.pathname === pathname)
+        const isUndefined = !filterOut.length
+        if (isUndefined) {
+            throw new Error(`The file you defined in config yaml file: ${pathname} is not created.`);
+            return "Not defined page (Check your config yaml file)" /* though cannot attach */
+        } else {
+            return filterOut[0].front_matter.title;
+        }
+    }
 
     /**
      * Recursively traverse and parse raw nav data.
